@@ -49,6 +49,15 @@ struct MainView: View {
                 }
                 .buttonStyle(.plain)
             }
+            // 分頁只有四個，右邊那段空白一直閒著。
+            // 放鎖定畫面那個 VAULT 當落款，順便讓這一列有個收尾。
+            // **不翻譯**，跟分頁那四個大寫字一樣是版面的一部分。
+            //
+            // 前後各一個 Spacer，讓它在剩下的空間裡置中而不是貼著右邊。
+            Spacer()
+            Text("VAULT")
+                .font(Typo.slab(42))
+                .kerning(-1)
             Spacer()
         }
     }
