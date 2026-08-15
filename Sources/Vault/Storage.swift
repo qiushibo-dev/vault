@@ -261,7 +261,7 @@ enum Storage {
         let files = root.appendingPathComponent("附件", isDirectory: true)
         try FileManager.default.createDirectory(at: files, withIntermediateDirectories: true)
 
-        var csv = "分類,名稱,內容,網址,備註,標籤,附件檔名,建立時間,更新時間\n"
+        var csv = "分類,名稱,使用者名稱,內容,網址,備註,標籤,附件檔名,建立時間,更新時間\n"
         let iso = ISO8601DateFormatter()
 
         for it in items {
@@ -275,7 +275,7 @@ enum Storage {
                 try? data.write(to: files.appendingPathComponent(filename), options: [.atomic])
             }
 
-            let cols = [it.kind.rawValue, it.name, it.value, it.url, it.note,
+            let cols = [it.kind.rawValue, it.name, it.username, it.value, it.url, it.note,
                         it.tags.joined(separator: " "), filename,
                         iso.string(from: it.created), iso.string(from: it.updated)]
             csv += cols.map(csvEscape).joined(separator: ",") + "\n"

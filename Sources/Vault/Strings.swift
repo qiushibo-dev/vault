@@ -46,6 +46,7 @@ struct L {
     let fAttach:       String
     let addFile:       String
     let phName:        String
+    let phUser:        String
     let phSecret:      String
     let phFileMeta:    String
     let enterHint:     String   // 空白列右邊的送出提示
@@ -173,7 +174,7 @@ struct L {
         newDocument: "在這裡打字，或按右邊加入檔案…",
         fURL: "網址", fNote: "備註", fTags: "標籤", fAttach: "附件",
         addFile: "加入檔案",
-        phName: "名稱", phSecret: "密碼", phFileMeta: "類型 · 大小",
+        phName: "名稱", phUser: "使用者名稱", phSecret: "密碼", phFileMeta: "類型 · 大小",
         enterHint: "Enter 新增",
         bioNoHardware: "這台機器沒有 Touch ID",
         bioNotEnrolled: "系統設定裡還沒有註冊指紋",
@@ -273,7 +274,7 @@ struct L {
         newDocument: "ここに入力、または右のボタンでファイルを追加…",
         fURL: "URL", fNote: "メモ", fTags: "タグ", fAttach: "添付",
         addFile: "ファイルを追加",
-        phName: "名前", phSecret: "パスワード", phFileMeta: "種類 · サイズ",
+        phName: "名前", phUser: "ユーザー名", phSecret: "パスワード", phFileMeta: "種類 · サイズ",
         enterHint: "Enter で追加",
         bioNoHardware: "この Mac に Touch ID はありません",
         bioNotEnrolled: "システム設定で指紋がまだ登録されていません",
@@ -373,7 +374,7 @@ struct L {
         newDocument: "Type here, or add a file on the right…",
         fURL: "URL", fNote: "Note", fTags: "Tags", fAttach: "Attached",
         addFile: "Add a file",
-        phName: "Name", phSecret: "Password", phFileMeta: "Type · size",
+        phName: "Name", phUser: "Username", phSecret: "Password", phFileMeta: "Type · size",
         enterHint: "Enter to add",
         bioNoHardware: "This Mac has no Touch ID",
         bioNotEnrolled: "No fingerprint enrolled in System Settings yet",

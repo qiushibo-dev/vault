@@ -130,6 +130,7 @@ print("\n存檔")
 
 var bank = Item(kind: .password)
 bank.name = "銀行"
+bank.username = "shihbo@example.com"
 bank.value = "Tr0ub4dor&3"
 bank.note = "分行：新宿"
 bank.tags = ["錢"]
@@ -159,6 +160,7 @@ check("三筆項目都回來了", reloaded.items.count == 3)
 check("密碼一字不差", reloaded.items[0].value == "Tr0ub4dor&3")
 check("日文和 emoji 沒壞", reloaded.items[1].value == "パスワード１２３🔐")
 check("備註和標籤都在", reloaded.items[0].note == "分行：新宿" && reloaded.items[0].tags == ["錢"])
+check("使用者名稱存得回來", reloaded.items[0].username == "shihbo@example.com")
 check("標籤定義存得回來", reloaded.tags.first?.name == "錢")
 check("設定跟著存（不放明文 plist）",
       reloaded.prefs.autoLockSeconds == 300 && reloaded.prefs.lang == .ja

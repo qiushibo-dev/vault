@@ -194,7 +194,7 @@ private struct Row: View {
     let expanded: Bool
 
     @FocusState private var focus: Field?
-    private enum Field { case name, value }
+    private enum Field { case name, username, value }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -202,15 +202,29 @@ private struct Row: View {
                 TextField("", text: $item.name)
                     .textFieldStyle(.plain)
                     .font(Typo.row)
-                    .frame(width: 150, alignment: .leading)
+                    .frame(width: Metric.col, alignment: .leading)
                     .focused($focus, equals: .name)
                     .overlay(alignment: .leading) {
                         ghost(item.name, store.t.phName, Typo.row, focused: focus == .name)
                     }
 
-                Rectangle().fill(Color.ink)
-                    .frame(width: 1.5, height: 26)
-                    .padding(.horizontal, 16)
+                divider
+
+                // 帳號欄**只有密碼分頁有**。文件那頁的中欄放帳號沒有意義，
+                // 硬要一致反而是浪費一整欄的寬度。
+                if item.kind == .password {
+                    TextField("", text: $item.username)
+                        .textFieldStyle(.plain)
+                        .font(Typo.rowValue)
+                        .frame(width: Metric.col, alignment: .leading)
+                        .focused($focus, equals: .username)
+                        .overlay(alignment: .leading) {
+                            ghost(item.username, store.t.phUser, Typo.rowValue,
+                                  focused: focus == .username)
+                        }
+
+                    divider
+                }
 
                 TextField("", text: $item.value)
                     .textFieldStyle(.plain)
@@ -246,6 +260,13 @@ private struct Row: View {
                 .padding(.horizontal, 16)
         }
     }
+
+    /// 欄與欄之間那條直線。三欄之後要用兩次，抽出來免得兩條長得不一樣。
+    private var divider: some View {
+        Rectangle().fill(Color.ink)
+            .frame(width: 1.5, height: 26)
+            .padding(.horizontal, 14)
+    }
 }
 
 /// 空欄位的淺灰提示。SwiftUI 的 TextField 沒有可上色的 placeholder，
@@ -277,26 +298,40 @@ private struct NewRow: View {
     let kind: Item.Kind
 
     @State private var name = ""
+    @State private var username = ""
     @State private var value = ""
     @FocusState private var focus: Field?
 
-    private enum Field { case name, value }
+    private enum Field { case name, username, value }
 
     var body: some View {
         HStack(spacing: 0) {
             TextField("", text: $name)
                 .textFieldStyle(.plain)
                 .font(Typo.row)
-                .frame(width: 150, alignment: .leading)
+                .frame(width: Metric.col, alignment: .leading)
                 .focused($focus, equals: .name)
                 .overlay(alignment: .leading) {
                     ghost(name, store.t.phName, Typo.row, focused: focus == .name)
                 }
-                .onSubmit { focus = .value }   // 名稱打完跳右邊，不是直接建一筆半空的
+                // 名稱打完往右跳，不是直接建一筆半空的
+                .onSubmit { focus = kind == .password ? .username : .value }
 
-            Rectangle().fill(Color.ink)
-                .frame(width: 1.5, height: 26)
-                .padding(.horizontal, 16)
+            divider
+
+            if kind == .password {
+                TextField("", text: $username)
+                    .textFieldStyle(.plain)
+                    .font(Typo.rowValue)
+                    .frame(width: Metric.col, alignment: .leading)
+                    .focused($focus, equals: .username)
+                    .overlay(alignment: .leading) {
+                        ghost(username, store.t.phUser, Typo.rowValue, focused: focus == .username)
+                    }
+                    .onSubmit { focus = .value }
+
+                divider
+            }
 
             TextField("", text: $value)
                 .textFieldStyle(.plain)
@@ -314,7 +349,7 @@ private struct NewRow: View {
             //
             // 只在有輸入時出現：空白列已經掛了兩個灰字提示，再加第三個會太吵，
             // 而且沒東西的時候按 Enter 本來就不會發生任何事。
-            if !name.isEmpty || !value.isEmpty {
+            if !name.isEmpty || !username.isEmpty || !value.isEmpty {
                 Text(store.t.enterHint)
                     .font(Typo.caption)
                     .foregroundStyle(Color.ink.opacity(0.3))
@@ -337,16 +372,24 @@ private struct NewRow: View {
         }
         .padding(.horizontal, 22)
         .frame(height: 54)
-        .animation(.easeOut(duration: 0.15), value: name.isEmpty && value.isEmpty)
+        .animation(.easeOut(duration: 0.15),
+                   value: name.isEmpty && username.isEmpty && value.isEmpty)
     }
 
-    /// 兩欄任一有東西就成立。只寫名稱之後再補密碼是很正常的用法。
+    private var divider: some View {
+        Rectangle().fill(Color.ink)
+            .frame(width: 1.5, height: 26)
+            .padding(.horizontal, 14)
+    }
+
+    /// 任一欄有東西就成立。只寫名稱之後再回頭補密碼是很正常的用法。
     private func commit() {
         let n = name.trimmingCharacters(in: .whitespaces)
+        let u = username.trimmingCharacters(in: .whitespaces)
         let v = value.trimmingCharacters(in: .whitespaces)
-        guard !n.isEmpty || !v.isEmpty else { return }
-        store.append(kind, name: n, value: v)
-        name = ""; value = ""
+        guard !n.isEmpty || !u.isEmpty || !v.isEmpty else { return }
+        store.append(kind, name: n, username: u, value: v)
+        name = ""; username = ""; value = ""
         focus = .name
     }
 }

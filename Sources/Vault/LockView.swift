@@ -51,7 +51,9 @@ struct LockView: View {
 
                     Spacer(minLength: 16)
 
-                    Text("2026 Chiu Shihbo v0.1")
+                    // 版本號一定要讀 Info.plist。寫死的話每次發版都得記得改這一行，
+                    // 而它在鎖定畫面的角落，改漏了半年也不會有人發現。
+                    Text("2026 Chiu Shihbo v\(store.version)")
                         .font(Typo.caption)
                         .padding(.bottom, 24)
                 }

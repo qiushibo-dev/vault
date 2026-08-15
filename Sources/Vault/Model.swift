@@ -47,6 +47,9 @@ struct Item: Identifiable, Codable, Equatable {
     var id = UUID().uuidString
     var kind: Kind
     var name = ""              // 左欄
+    /// 中欄，**只有密碼分頁會顯示**。一組密碼幾乎都連著一個帳號，
+    /// 少了它就得把帳號硬塞進名稱欄或備註裡。選填。
+    var username = ""
     var value = ""             // 右欄（密碼／檔案摘要）
     var url = ""
     var note = ""
@@ -70,6 +73,7 @@ struct Item: Identifiable, Codable, Equatable {
         id         = try c.decodeIfPresent(String.self, forKey: .id) ?? UUID().uuidString
         kind       = try c.decodeIfPresent(Kind.self, forKey: .kind) ?? .password
         name       = try c.decodeIfPresent(String.self, forKey: .name) ?? ""
+        username   = try c.decodeIfPresent(String.self, forKey: .username) ?? ""
         value      = try c.decodeIfPresent(String.self, forKey: .value) ?? ""
         url        = try c.decodeIfPresent(String.self, forKey: .url) ?? ""
         note       = try c.decodeIfPresent(String.self, forKey: .note) ?? ""
@@ -84,6 +88,7 @@ struct Item: Identifiable, Codable, Equatable {
 
     var isBlank: Bool {
         name.trimmingCharacters(in: .whitespaces).isEmpty &&
+        username.trimmingCharacters(in: .whitespaces).isEmpty &&
         value.trimmingCharacters(in: .whitespaces).isEmpty
     }
 

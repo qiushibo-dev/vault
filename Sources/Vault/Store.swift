@@ -242,7 +242,8 @@ final class Store {
     }
 
     var version: String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1.0"
+        // 讀不到就老實顯示問號。給一個假的版本號會讓人以為自己裝的是那一版
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
     }
     var dataPath: String { VaultPaths.dir.path }
 
@@ -315,9 +316,10 @@ final class Store {
 
     /// 在空白行打字 → 補一筆新的
     @discardableResult
-    func append(_ kind: Item.Kind, name: String = "", value: String = "") -> Item {
+    func append(_ kind: Item.Kind, name: String = "", username: String = "", value: String = "") -> Item {
         var it = Item(kind: kind)
         it.name = name
+        it.username = username
         it.value = value
         items.append(it)
         scheduleSave()

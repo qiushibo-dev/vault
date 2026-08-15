@@ -31,6 +31,10 @@ enum Metric {
     static let card:   CGFloat = 40      // 卡片
     static let small:  CGFloat = 10      // 巢狀的小元件
     static let win     = CGSize(width: 760, height: 880)
+    /// 橫線紙上固定寬度的欄（名稱、使用者名稱）。
+    /// 密碼那頁是三欄，760 的視窗扣掉分隔線和右邊兩顆按鈕之後，
+    /// 這個數字再大就會把密碼欄擠到只剩一小條。
+    static let col:    CGFloat = 132
 }
 
 // ── 藥丸容器 ──────────────────────────────────────────
