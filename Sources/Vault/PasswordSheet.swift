@@ -106,7 +106,9 @@ struct PasswordSheet: View {
             .overlay(RoundedRectangle(cornerRadius: Metric.pill)
                 .stroke(Color.ink, lineWidth: Metric.border))
 
-            if v.wrappedValue.isEmpty {
+            // 有焦點就讓開——中文輸入法組字階段綁定值還是空的，
+            // 提示會跟正在打的字疊在一起（提示問題那一欄最明顯）
+            if v.wrappedValue.isEmpty && focus != f {
                 Text(ph.isEmpty ? label : ph)
                     .font(ph.isEmpty ? Typo.nav : Typo.caption)
                     .foregroundStyle(Color.ink.opacity(ph.isEmpty ? 1 : 0.4))
@@ -116,22 +118,30 @@ struct PasswordSheet: View {
         }
     }
 
+    /// 舊密碼的驗證交給 `KeyStore`——它會拿舊密碼去拆封主金鑰，拆不開就是打錯了。
+    /// **這裡不能自己比對字串**，因為根本沒有一份儲存的密碼可以拿來比。
     private func submit() {
+        guard !store.working else { return }
         error = nil
 
-        if mode == .change {
-            guard current == store.password else { error = t.pwWrong; return }
-        }
         guard pw.count >= 8 else { error = t.pwTooShort; return }
         guard pw == again else { error = t.pwMismatch; return }
 
-        if mode == .create {
-            let h = hint.trimmingCharacters(in: .whitespaces)
-            if !h.isEmpty { store.passwordHint = h }
-            store.createPassword(pw)
-        } else {
-            store.changePassword(pw)
+        Task {
+            if mode == .create {
+                let h = hint.trimmingCharacters(in: .whitespaces)
+                guard await store.createVault(password: pw, hint: h) else {
+                    error = store.lastError ?? t.pwWrong
+                    return
+                }
+            } else {
+                guard !current.isEmpty else { error = t.pwWrong; return }
+                guard await store.changePassword(current: current, new: pw) else {
+                    error = t.pwWrong
+                    return
+                }
+            }
+            dismiss()
         }
-        dismiss()
     }
 }

@@ -90,10 +90,23 @@ struct MainView: View {
                             .fill(item.kind == .video ? Color.powder : Color.peach)
                         if item.kind == .video {
                             DoodleView(kind: .film, size: 54, stroke: 2)
-                        } else if let img = NSImage(contentsOfFile: item.attachment) {
-                            Image(nsImage: img)
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
+                        } else if let img = store.thumbnail(item) {
+                            // **`Color.clear` 這層不能省。**
+                            //
+                            // 直接放 `Image.resizable().aspectRatio(.fill)` 的話，圖片會回報
+                            // 一個「填滿後」的尺寸當作自己的大小，ZStack 跟著被撐大，
+                            // 於是外面那個 clipShape 裁的是已經變大的範圍——等於沒裁。
+                            // 非正方形的照片就這樣壓到隔壁格子上。
+                            //
+                            // Color.clear 是可伸縮的，它把格子的實際尺寸定下來，
+                            // 圖片以 overlay 疊上去、溢出的部分由 clipped() 切掉。
+                            Color.clear
+                                .overlay(
+                                    Image(nsImage: img)
+                                        .resizable()
+                                        .scaledToFill()
+                                )
+                                .clipped()
                         }
                     }
                     .clipShape(RoundedRectangle(cornerRadius: Metric.small))
@@ -180,6 +193,9 @@ private struct Row: View {
     @Binding var item: Item
     let expanded: Bool
 
+    @FocusState private var focus: Field?
+    private enum Field { case name, value }
+
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
@@ -187,7 +203,10 @@ private struct Row: View {
                     .textFieldStyle(.plain)
                     .font(Typo.row)
                     .frame(width: 150, alignment: .leading)
-                    .overlay(alignment: .leading) { ghost(item.name, store.t.phName, Typo.row) }
+                    .focused($focus, equals: .name)
+                    .overlay(alignment: .leading) {
+                        ghost(item.name, store.t.phName, Typo.row, focused: focus == .name)
+                    }
 
                 Rectangle().fill(Color.ink)
                     .frame(width: 1.5, height: 26)
@@ -196,10 +215,11 @@ private struct Row: View {
                 TextField("", text: $item.value)
                     .textFieldStyle(.plain)
                     .font(Typo.rowValue)
+                    .focused($focus, equals: .value)
                     .overlay(alignment: .leading) {
                         ghost(item.value,
                               item.kind == .password ? store.t.phSecret : store.t.phFileMeta,
-                              Typo.rowValue)
+                              Typo.rowValue, focused: focus == .value)
                     }
 
                 Button { store.toggleDetail(item.id) } label: {
@@ -230,9 +250,14 @@ private struct Row: View {
 
 /// 空欄位的淺灰提示。SwiftUI 的 TextField 沒有可上色的 placeholder，
 /// 只能自己疊一層——而且要 allowsHitTesting(false)，不然點不進去。
+///
+/// **`focused` 這個參數不能省。**
+/// 中文輸入法在組字階段（打了注音還沒選字）綁定的值仍然是空字串，
+/// 光看 `value.isEmpty` 會以為使用者還沒開始打，於是提示文字繼續留在原地，
+/// 跟正在組的那個字疊在一起。有焦點就代表人已經在打了，提示該讓開。
 @ViewBuilder
-private func ghost(_ value: String, _ text: String, _ font: Font) -> some View {
-    if value.isEmpty {
+private func ghost(_ value: String, _ text: String, _ font: Font, focused: Bool = false) -> some View {
+    if value.isEmpty && !focused {
         Text(text)
             .font(font)
             .foregroundStyle(Color.ink.opacity(0.26))
@@ -242,24 +267,61 @@ private func ghost(_ value: String, _ text: String, _ font: Font) -> some View {
 
 // ── 空白列＝新增 ──────────────────────────────────────
 // 橫線紙本來就有這個好處：往下一行開始寫就是加一筆，不需要「＋」按鈕。
+/// **結構必須跟 `Row` 一模一樣**：一樣的 150 寬左欄、一樣的分隔線、一樣的兩個灰字提示。
+///
+/// 舊版是一整條橫跨的輸入框配一句「在這裡寫下一筆…」。第一次打開 app 的時候
+/// 清單是空的，畫面上就只有那一條——**看不出這一列有兩欄，也不知道右邊要填什麼**。
+/// 空白列要能當範例看，照著上面那些列的樣子長才行。
 private struct NewRow: View {
     @Environment(Store.self) private var store
     let kind: Item.Kind
-    @State private var draft = ""
+
+    @State private var name = ""
+    @State private var value = ""
+    @FocusState private var focus: Field?
+
+    private enum Field { case name, value }
 
     var body: some View {
-        HStack(spacing: 12) {
-            TextField("", text: $draft)
+        HStack(spacing: 0) {
+            TextField("", text: $name)
                 .textFieldStyle(.plain)
                 .font(Typo.row)
+                .frame(width: 150, alignment: .leading)
+                .focused($focus, equals: .name)
                 .overlay(alignment: .leading) {
-                    if draft.isEmpty {
-                        Text(placeholder).font(Typo.row)
-                            .foregroundStyle(Color.ink.opacity(0.28))
-                            .allowsHitTesting(false)
-                    }
+                    ghost(name, store.t.phName, Typo.row, focused: focus == .name)
+                }
+                .onSubmit { focus = .value }   // 名稱打完跳右邊，不是直接建一筆半空的
+
+            Rectangle().fill(Color.ink)
+                .frame(width: 1.5, height: 26)
+                .padding(.horizontal, 16)
+
+            TextField("", text: $value)
+                .textFieldStyle(.plain)
+                .font(Typo.rowValue)
+                .focused($focus, equals: .value)
+                .overlay(alignment: .leading) {
+                    ghost(value,
+                          kind == .password ? store.t.phSecret : store.t.phFileMeta,
+                          Typo.rowValue, focused: focus == .value)
                 }
                 .onSubmit(commit)
+
+            // 打完之後右邊是空的，沒有任何東西說明下一步——**人就卡在那裡**。
+            // 上面每一列的同一個位置都有 detail 和 ✕，這一列不能只有空白。
+            //
+            // 只在有輸入時出現：空白列已經掛了兩個灰字提示，再加第三個會太吵，
+            // 而且沒東西的時候按 Enter 本來就不會發生任何事。
+            if !name.isEmpty || !value.isEmpty {
+                Text(store.t.enterHint)
+                    .font(Typo.caption)
+                    .foregroundStyle(Color.ink.opacity(0.3))
+                    .allowsHitTesting(false)
+                    .padding(.leading, 12)
+                    .transition(.opacity)
+            }
 
             // 文件是從硬碟來的，光靠打字建不出一筆，所以這裡要有入口。
             if kind == .document {
@@ -270,29 +332,22 @@ private struct NewRow: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .padding(.leading, 12)
             }
         }
         .padding(.horizontal, 22)
         .frame(height: 54)
+        .animation(.easeOut(duration: 0.15), value: name.isEmpty && value.isEmpty)
     }
 
-    private var placeholder: String {
-        switch kind {
-        case .password:       store.t.newPassword
-        case .document:       store.t.newDocument
-        case .photo, .video:  ""      // 格狀分頁不走這條列
-        }
-    }
-
+    /// 兩欄任一有東西就成立。只寫名稱之後再補密碼是很正常的用法。
     private func commit() {
-        let t = draft.trimmingCharacters(in: .whitespaces)
-        guard !t.isEmpty else { return }
-        var it = store.append(kind)
-        it.name = t
-        if let i = store.items.firstIndex(where: { $0.id == it.id }) {
-            store.items[i] = it
-        }
-        draft = ""
+        let n = name.trimmingCharacters(in: .whitespaces)
+        let v = value.trimmingCharacters(in: .whitespaces)
+        guard !n.isEmpty || !v.isEmpty else { return }
+        store.append(kind, name: n, value: v)
+        name = ""; value = ""
+        focus = .name
     }
 }
 
@@ -352,11 +407,13 @@ private struct Drawer: View {
                     }
                     .buttonStyle(.plain)
                 } else {
-                    Text((item.attachment as NSString).lastPathComponent)
+                    // 附件已經加密複製進保管箱，這裡沒有路徑可以顯示了。
+                    // 顯示的是使用者自己給的名字加上原本的副檔名。
+                    Text(item.ext.isEmpty ? item.name : "\(item.name).\(item.ext)")
                         .font(Typo.body)
                         .lineLimit(1)
                         .truncationMode(.middle)
-                    Button { item.attachment = "" } label: {
+                    Button { detachFile() } label: {
                         Text("✕").font(Typo.caption)
                     }
                     .buttonStyle(.plain)
@@ -371,12 +428,20 @@ private struct Drawer: View {
         .padding(.bottom, 14)
     }
 
+    /// 選檔之後**整份加密複製進保管箱**，存下來的是編號不是路徑。
     private func pickAttachment() {
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        item.attachment = url.path
+        store.attach(url, to: item.id)
+    }
+
+    /// 拿掉附件時要把密文一起刪掉，否則 blobs 底下會囤一堆再也沒人指向的檔案。
+    private func detachFile() {
+        Storage.deleteBlob(item.attachment)
+        item.attachment = ""
+        item.ext = ""
     }
 
     private func field(_ label: String, _ v: Binding<String>, hint: String = "") -> some View {

@@ -1,6 +1,6 @@
 import Foundation
 
-enum Lang: String, CaseIterable, Identifiable {
+enum Lang: String, CaseIterable, Identifiable, Codable {
     case zh, ja, en
     var id: String { rawValue }
     var label: String {
@@ -48,7 +48,25 @@ struct L {
     let phName:        String
     let phSecret:      String
     let phFileMeta:    String
-    let exportOriginal: String
+    let enterHint:     String   // 空白列右邊的送出提示
+
+    // Touch ID 用不了的原因。不講清楚的話，那顆按鈕就只是「有時候不見」
+    let bioNoHardware: String
+    let bioNotEnrolled: String
+    let bioLockout:    String
+    let bioUnreachable: String
+    let bioNeedsSigning: String
+    let bioReady:      String
+
+    // 提示問題的答案
+    let sAnswer:       String
+    let sAnswerSub:    String
+    let answerPh:      String
+    let answerSaved:   String
+    let answerNotSet:  String
+    let answerHere:    String   // 鎖定畫面上答案欄的說明
+    let exportOriginal: String   // 照片
+    let exportFile:    String    // 影片。「原圖」對一支影片講不通
     let exportThumb:   String
     let thumbNote:     String
     let preview:       String
@@ -117,6 +135,13 @@ struct L {
     let hintPh:        String
     let save:          String
 
+    // 加密之後才需要的字
+    let recoveryOnce:  String   // 剛產生金鑰時的警告
+    let recoveryGone:  String   // 平常看不到金鑰的說明
+    let notYet:        String   // iCloud 還沒做
+    let busy:          String
+    let gotIt:         String
+
     let off:           String
     let sec30:         String
     let min1:          String
@@ -149,7 +174,21 @@ struct L {
         fURL: "網址", fNote: "備註", fTags: "標籤", fAttach: "附件",
         addFile: "加入檔案",
         phName: "名稱", phSecret: "密碼", phFileMeta: "類型 · 大小",
+        enterHint: "Enter 新增",
+        bioNoHardware: "這台機器沒有 Touch ID",
+        bioNotEnrolled: "系統設定裡還沒有註冊指紋",
+        bioLockout: "失敗太多次被系統鎖住了，先用密碼登入一次",
+        bioUnreachable: "現在碰不到感應器。筆電闔蓋接外接螢幕時，Touch ID 用不了",
+        bioNeedsSigning: "需要 Apple 正式簽名才能啟用。目前這個版本是自行簽署的",
+        bioReady: "已就緒",
+        sAnswer: "答案",
+        sAnswerSub: "答對就能進入，所以這等於第二個密碼。不要用別人猜得到的答案。留空就只是提醒，不能拿來開鎖。",
+        answerPh: "設定答案",
+        answerSaved: "已設定答案。要更換就在這裡填新的",
+        answerNotSet: "還沒有設定答案",
+        answerHere: "在這裡回答",
         exportOriginal: "匯出原圖",
+        exportFile: "匯出原檔",
         exportThumb: "匯出縮圖",
         thumbNote: "縮圖是長邊 1024 的 JPEG，用來貼進表單或寄出去。",
         preview: "用系統播放器預覽",
@@ -208,6 +247,12 @@ struct L {
         hintPh: "提示問題　例：母親的舊姓是什麼？",
         save: "儲存",
 
+        recoveryOnce: "這串金鑰只會出現這一次。抄下來收好——關掉之後連這個畫面也叫不回來。",
+        recoveryGone: "金鑰只在產生的當下顯示一次，之後就存不回來了。想不起來放哪就重新產生一組。",
+        notYet: "尚未支援",
+        busy: "處理中…",
+        gotIt: "我抄好了",
+
         off: "關閉", sec30: "30 秒", min1: "1 分鐘", min5: "5 分鐘", min15: "15 分鐘"
     )
 
@@ -229,7 +274,21 @@ struct L {
         fURL: "URL", fNote: "メモ", fTags: "タグ", fAttach: "添付",
         addFile: "ファイルを追加",
         phName: "名前", phSecret: "パスワード", phFileMeta: "種類 · サイズ",
+        enterHint: "Enter で追加",
+        bioNoHardware: "この Mac に Touch ID はありません",
+        bioNotEnrolled: "システム設定で指紋がまだ登録されていません",
+        bioLockout: "失敗が続いたためロックされました。一度パスワードで入ってください",
+        bioUnreachable: "センサーに触れません。クラムシェル（閉じたまま外部ディスプレイ）では使えません",
+        bioNeedsSigning: "Apple の正式な署名が必要です。このビルドは自己署名です",
+        bioReady: "使用できます",
+        sAnswer: "答え",
+        sAnswerSub: "正解すれば入れます。つまり二つ目のパスワードです。他人に推測される答えは避けてください。空欄なら覚え書きとしてのみ機能し、解錠には使えません。",
+        answerPh: "答えを設定",
+        answerSaved: "設定済みです。変更するにはここに新しい答えを入力してください",
+        answerNotSet: "答えはまだ設定されていません",
+        answerHere: "ここに答える",
         exportOriginal: "元画像を書き出す",
+        exportFile: "元ファイルを書き出す",
         exportThumb: "縮小版を書き出す",
         thumbNote: "縮小版は長辺 1024 の JPEG です。フォームに貼るときや送るときに。",
         preview: "システムのプレイヤーで再生",
@@ -288,6 +347,12 @@ struct L {
         hintPh: "ヒントの質問　例：母の旧姓は？",
         save: "保存",
 
+        recoveryOnce: "このキーが表示されるのはこの一度だけです。閉じると二度と確認できません。",
+        recoveryGone: "キーは生成した瞬間にしか表示されません。分からなくなった場合は再生成してください。",
+        notYet: "未対応",
+        busy: "処理中…",
+        gotIt: "控えました",
+
         off: "オフ", sec30: "30 秒", min1: "1 分", min5: "5 分", min15: "15 分"
     )
 
@@ -309,7 +374,21 @@ struct L {
         fURL: "URL", fNote: "Note", fTags: "Tags", fAttach: "Attached",
         addFile: "Add a file",
         phName: "Name", phSecret: "Password", phFileMeta: "Type · size",
+        enterHint: "Enter to add",
+        bioNoHardware: "This Mac has no Touch ID",
+        bioNotEnrolled: "No fingerprint enrolled in System Settings yet",
+        bioLockout: "Locked out after too many attempts — sign in with your password once",
+        bioUnreachable: "The sensor is out of reach. Touch ID cannot be used with the lid closed",
+        bioNeedsSigning: "Requires a proper Apple signature. This build is self-signed",
+        bioReady: "Ready",
+        sAnswer: "Answer",
+        sAnswerSub: "A correct answer opens the vault, so this is effectively a second password. Do not use something others could guess. Leave it empty and the question stays a reminder only.",
+        answerPh: "Set an answer",
+        answerSaved: "An answer is set. Type a new one here to replace it",
+        answerNotSet: "No answer set",
+        answerHere: "Answer here",
         exportOriginal: "Export original",
+        exportFile: "Export original file",
         exportThumb: "Export smaller copy",
         thumbNote: "The smaller copy is a JPEG with a 1024px long edge, for pasting into forms or sending on.",
         preview: "Open in the system player",
@@ -367,6 +446,12 @@ struct L {
         pwWrong: "That isn't the password",
         hintPh: "Hint question   e.g. what is my mother's maiden name?",
         save: "Save",
+
+        recoveryOnce: "This is the only time the key will be shown. Write it down — it cannot be recovered.",
+        recoveryGone: "The key is shown once, at the moment it is created. Generate a new one if it has been lost.",
+        notYet: "Not yet supported",
+        busy: "Working…",
+        gotIt: "I've written it down",
 
         off: "Off", sec30: "30 seconds", min1: "1 minute", min5: "5 minutes", min15: "15 minutes"
     )

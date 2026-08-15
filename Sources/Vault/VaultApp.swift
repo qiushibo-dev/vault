@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 @main
 struct VaultApp: App {
@@ -39,24 +40,49 @@ struct ContentView: View {
         }
         .frame(width: Metric.win.width, height: Metric.win.height)
         .background(Color.peach)
-        .sheet(isPresented: $s.showSettings) {
+        // 兩個 onDismiss 都要有。復原金鑰可能是在設定裡重產的，
+        // 也可能是建立保管箱時產生的——哪一張先關就由哪一張放行。
+        .sheet(isPresented: $s.showSettings, onDismiss: { store.flushPendingRecovery() }) {
             SettingsSheet().environment(store)
         }
-        .sheet(item: $s.pwSheet) { mode in
+        .sheet(item: $s.pwSheet, onDismiss: { store.flushPendingRecovery() }) { mode in
             PasswordSheet(mode: mode).environment(store)
         }
         .sheet(item: $s.photoViewer) { item in
             PhotoViewer(item: item).environment(store)
         }
+        // 復原金鑰只在剛產生的那一刻存在於記憶體裡，關掉這張紙就再也叫不回來
+        .sheet(item: $s.freshRecoveryKey) { key in
+            RecoveryKeySheet(key: key).environment(store)
+        }
         .onAppear {
+            Biometrics.diagnose("啟動")
             idle.limit = store.autoLockSeconds
             idle.start {
                 guard !store.locked else { return }
                 store.lock()
             }
         }
-        .onChange(of: store.autoLockSeconds) { _, v in idle.limit = v }
+        .onChange(of: store.autoLockSeconds) { _, v in
+            idle.limit = v
+            store.scheduleSave()
+        }
         .onChange(of: store.locked) { _, _ in idle.suspend() }
+        // 設定是直接綁在 store 上改的，沒有經過任何方法可以插存檔。
+        // 少一行就是那個設定重開之後會跳回預設值。
+        .onChange(of: store.touchIDOn) { _, on in
+            if !on { Biometrics.forget() }          // 關掉就把 Keychain 那份收回來
+            else if let m = store.masterKey, Biometrics.available { Biometrics.enrol(master: m) }
+            store.scheduleSave()
+        }
+        .onChange(of: store.clipboardSeconds) { _, _ in store.scheduleSave() }
+        .onChange(of: store.lang) { _, _ in store.scheduleSave() }
+        // 延遲存檔還沒寫完就被關掉的話資料就掉了，結束前一定要落地一次
+        .onReceive(NotificationCenter.default.publisher(
+            for: NSApplication.willTerminateNotification)) { _ in
+            store.saveNow()
+            Storage.clearScratch()
+        }
         // 視窗沒有標題列，所以整片背景都要能拖動視窗
         .background(WindowDragArea())
     }
