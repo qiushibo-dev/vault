@@ -30,12 +30,12 @@ let shape = NSBezierPath(roundedRect: box, xRadius: 185, yRadius: 185)
 NSColor(srgbRed: 0xf6/255, green: 0xe0/255, blue: 0xdb/255, alpha: 1).setFill()
 shape.fill()
 
-// 2px 的黑框等比放大到 1024 尺度
-NSColor.black.setStroke()
-shape.lineWidth = 13
-shape.stroke()
+// **不要描黑框。**
+// DESIGN.md 的「2px 黑框」是給 UI 卡片用的。等比放大到 1024 尺度會變成 13px，
+// 縮回 Dock 的 32px 之後只剩 0.4px，抗鋸齒把它糊成一圈灰黑，讀起來像髒邊而不是設計。
+// macOS 的圖示慣例本來也不描外框——輪廓由形狀本身負責。
 
-let size: CGFloat = 560
+let size: CGFloat = 600
 guard let font = NSFont(name: "AlfaSlabOne-Regular", size: size)
               ?? NSFont(name: "Alfa Slab One", size: size) else {
     FileHandle.standardError.write("font not found\n".data(using: .utf8)!)
