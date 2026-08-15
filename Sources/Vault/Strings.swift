@@ -116,6 +116,9 @@ struct L {
     let tagDeleteWarnFmt: String // %@ 標籤名, %d 筆數
     let rename:        String
     let delete:        String
+    let deleteWarn:    String   // 刪一筆項目的確認
+    let tagNew:        String   // 在 detail 裡當場開一個新標籤
+    let tagNewPh:      String
     let cancel:        String
     let checkUpdate:   String
     let checking:      String
@@ -231,7 +234,9 @@ struct L {
         tagUnused: "還沒用過",
         tagColourHint: "點色塊換一支蠟筆。顏色只能從這盒裡挑，自由選色會讓整個畫面散掉。",
         tagDeleteWarnFmt: "刪除「%@」會從 %d 筆上一起移除，那些資料本身不會消失。",
-        rename: "改名", delete: "刪除", cancel: "取消",
+        rename: "改名", delete: "刪除",
+        deleteWarn: "刪掉之後救不回來，確定要刪除這一筆嗎？",
+        tagNew: "＋ 新增標籤…", tagNewPh: "標籤名稱", cancel: "取消",
         checkUpdate: "檢查更新",
         checking: "查詢中…", isLatest: "已是最新", newVersion: "有新版本",
 
@@ -331,7 +336,10 @@ struct L {
         tagUnused: "未使用",
         tagColourHint: "色をタップすると別のクレヨンに変わります。この箱の中からしか選べません。自由に選べると画面が散らかるからです。",
         tagDeleteWarnFmt: "「%@」を削除すると %d 件から外れます。データそのものは消えません。",
-        rename: "名前を変更", delete: "削除", cancel: "キャンセル",
+        rename: "名前を変更", delete: "削除",
+        deleteWarn: "削除すると元に戻せません。この項目を削除しますか？",
+        tagNew: "＋ タグを追加…", tagNewPh: "タグ名",
+        cancel: "キャンセル",
         checkUpdate: "更新を確認",
         checking: "確認中…", isLatest: "最新です", newVersion: "新しい版があります",
 
@@ -431,7 +439,10 @@ struct L {
         tagUnused: "not used yet",
         tagColourHint: "Tap a swatch to pick a different crayon. You can only choose from this box, because free colour choice would scatter the whole page.",
         tagDeleteWarnFmt: "Deleting \"%@\" takes it off %d items. The items themselves stay.",
-        rename: "Rename", delete: "Delete", cancel: "Cancel",
+        rename: "Rename", delete: "Delete",
+        deleteWarn: "This cannot be undone. Delete this entry?",
+        tagNew: "＋ New tag…", tagNewPh: "Tag name",
+        cancel: "Cancel",
         checkUpdate: "Check for updates",
         checking: "Checking…", isLatest: "Up to date", newVersion: "New version",
 

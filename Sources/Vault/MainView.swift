@@ -4,6 +4,10 @@ import AppKit
 struct MainView: View {
     @Environment(Store.self) private var store
 
+    /// 格狀畫面等待確認刪除的那一筆。
+    /// 照片和影片的刪除會**連加密過的附件一起清掉**，跟橫線紙那邊一樣不可逆。
+    @State private var pendingDelete: Item? = nil
+
     var body: some View {
         @Bindable var s = store
         ZStack {
@@ -18,6 +22,15 @@ struct MainView: View {
             .padding(.bottom, 26)
         }
         .frame(width: Metric.win.width, height: Metric.win.height)
+        .alert(store.t.deleteWarn, isPresented: .init(
+            get: { pendingDelete != nil },
+            set: { if !$0 { pendingDelete = nil } })) {
+            Button(store.t.cancel, role: .cancel) { pendingDelete = nil }
+            Button(store.t.delete, role: .destructive) {
+                if let d = pendingDelete { store.delete(d.id) }
+                pendingDelete = nil
+            }
+        }
     }
 
     // ── 分頁 ──────────────────────────────────────────
@@ -115,7 +128,7 @@ struct MainView: View {
                     .contentShape(Rectangle())
                     .onTapGesture(count: 2) { store.photoViewer = item }
                     .contextMenu {
-                        Button(store.t.delete) { store.delete(item.id) }
+                        Button(store.t.delete) { pendingDelete = item }
                     }
                 }
             }
@@ -244,12 +257,8 @@ private struct Row: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-
-                Button { store.delete(item.id) } label: {
-                    Text("✕").font(Typo.body)
-                }
-                .buttonStyle(.plain)
-                .padding(.leading, 12)
+                // 刪除鍵搬進 detail 抽屜了。原本就掛在 detail 按鈕旁邊，
+                // 手滑一下整筆就沒了，而且沒有任何確認。
             }
             .padding(.horizontal, 22)
             .frame(height: 54)
@@ -399,6 +408,13 @@ private struct Drawer: View {
     @Environment(Store.self) private var store
     @Binding var item: Item
 
+    @State private var confirmDelete = false
+    @State private var addingTag = false
+    @State private var newTag = ""
+    /// 目前展開 ✕ 的那顆標籤。一次只有一顆。
+    @State private var selectedTag: String? = nil
+    @FocusState private var tagFocused: Bool
+
     var body: some View {
         VStack(spacing: 0) {
             field(store.t.fURL, $item.url)
@@ -408,32 +424,50 @@ private struct Drawer: View {
                 HStack(spacing: 7) {
                     // 顏色來自設定裡的標籤管理，不是這裡指定的
                     ForEach(item.tags, id: \.self) { name in
-                        Pill(fill: store.colour(ofTag: name),
-                             radius: Metric.pill, padH: 12, padV: 3) {
-                            Text(name).font(Typo.caption)
-                        }
+                        tagPill(name)
                     }
-                    Menu {
-                        ForEach(store.tagList) { tag in
-                            if !item.tags.contains(tag.name) {
-                                Button(tag.name) { item.tags.append(tag.name) }
+
+                    // 加標籤原本走下拉選單，那個選單只列得出「設定裡建過、
+                    // 而且這筆還沒用到」的標籤——只建了一個標籤的人加上去之後
+                    // 上半部就空了，看起來像壞掉。現在點＋直接就地打字。
+                    if addingTag {
+                        TextField("", text: $newTag)
+                            .textFieldStyle(.plain)
+                            .font(Typo.caption)
+                            .focused($tagFocused)
+                            .frame(width: 92)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 3)
+                            .background(RoundedRectangle(cornerRadius: Metric.pill).fill(Color.snow))
+                            .overlay(RoundedRectangle(cornerRadius: Metric.pill)
+                                .stroke(Color.ink, lineWidth: Metric.border))
+                            .overlay(alignment: .leading) {
+                                if newTag.isEmpty && !tagFocused {
+                                    Text(store.t.tagNewPh)
+                                        .font(Typo.caption)
+                                        .foregroundStyle(Color.ink.opacity(0.3))
+                                        .padding(.leading, 13)
+                                        .allowsHitTesting(false)
+                                }
                             }
-                        }
-                        if !item.tags.isEmpty {
-                            Divider()
-                            ForEach(item.tags, id: \.self) { name in
-                                Button("✕ \(name)") { item.tags.removeAll { $0 == name } }
+                            .onSubmit(commitNewTag)
+                            // Esc 收起來。沒有這條就只能打完或點別的地方才脫身
+                            .onExitCommand { addingTag = false; newTag = "" }
+                    } else {
+                        Button {
+                            newTag = ""
+                            addingTag = true
+                            tagFocused = true
+                        } label: {
+                            Pill(radius: Metric.pill, padH: 12, padV: 3) {
+                                Text("＋").font(Typo.caption)
                             }
+                            .contentShape(Rectangle())
                         }
-                    } label: {
-                        Pill(radius: Metric.pill, padH: 12, padV: 3) {
-                            Text("＋").font(Typo.caption)
-                        }
+                        .buttonStyle(.plain)
                     }
-                    .menuStyle(.borderlessButton)
-                    .menuIndicator(.hidden)
-                    .fixedSize()
                 }
+                .animation(.easeOut(duration: 0.15), value: addingTag)
                 Spacer()
             }
             .padding(.vertical, 7)
@@ -465,10 +499,74 @@ private struct Drawer: View {
                 Spacer()
             }
             .padding(.vertical, 7)
+
+            // 刪除移到這裡。原本那顆 ✕ 就掛在主列右邊，緊鄰 detail 按鈕，
+            // **手滑一下整筆就沒了而且沒有任何確認**。收進抽屜代表要先展開才碰得到，
+            // 再加一道確認才動手。
+            HStack {
+                Spacer()
+                Button { confirmDelete = true } label: {
+                    Pill(fill: .ember, radius: Metric.pill, padH: 14, padV: 4) {
+                        Text("✕ \(store.t.delete)").font(Typo.caption)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.top, 4)
         }
         .padding(.horizontal, 22)
         .padding(.top, 4)
         .padding(.bottom, 14)
+        .alert(store.t.deleteWarn, isPresented: $confirmDelete) {
+            Button(store.t.cancel, role: .cancel) {}
+            Button(store.t.delete, role: .destructive) { store.delete(item.id) }
+        }
+    }
+
+    /// 標籤藥丸。點一下展開 ✕，再點 ✕ 才移除。
+    ///
+    /// 舊版的移除藏在下拉選單裡的「✕ 標籤名」，要先知道選單裡有那個東西才找得到。
+    /// **展開後才出現 ✕**，是因為這排藥丸平常是拿來看的，不是拿來按的，
+    /// 每顆都掛一個 ✕ 會讓整行變得很吵。
+    @ViewBuilder
+    private func tagPill(_ name: String) -> some View {
+        Pill(fill: store.colour(ofTag: name), radius: Metric.pill, padH: 12, padV: 3) {
+            HStack(spacing: 6) {
+                Text(name).font(Typo.caption)
+                if selectedTag == name {
+                    Text("✕")
+                        .font(Typo.caption)
+                        // ✕ 本身很小，要自己撐開一塊可以點的區域
+                        .padding(.vertical, 2)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            item.tags.removeAll { $0 == name }
+                            selectedTag = nil
+                        }
+                }
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            withAnimation(.easeOut(duration: 0.12)) {
+                selectedTag = (selectedTag == name) ? nil : name
+            }
+        }
+    }
+
+    /// 當場建立標籤並套用到這一筆。**兩件事都要做**——
+    /// 只加進 `tagList` 的話使用者還得再找一次去選，
+    /// 只寫進 `item.tags` 的話它沒有顏色也不會出現在別筆可選的清單裡。
+    ///
+    /// 打到已經存在的名字也沒關係，`addTag` 會擋掉重複，顏色沿用原本那顆。
+    private func commitNewTag() {
+        let n = newTag.trimmingCharacters(in: .whitespaces)
+        guard !n.isEmpty else { addingTag = false; return }
+        store.addTag(n)
+        if !item.tags.contains(n) { item.tags.append(n) }
+        newTag = ""
+        addingTag = false
     }
 
     /// 選檔之後**整份加密複製進保管箱**，存下來的是編號不是路徑。
