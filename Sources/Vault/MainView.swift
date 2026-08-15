@@ -413,6 +413,8 @@ private struct Drawer: View {
     @State private var newTag = ""
     /// 目前展開 ✕ 的那顆標籤。一次只有一顆。
     @State private var selectedTag: String? = nil
+    /// 候選清單裡用鍵盤選到第幾項。-1 表示沒選，這時 Enter 建立新的
+    @State private var highlighted = -1
     @FocusState private var tagFocused: Bool
 
     var body: some View {
@@ -453,6 +455,12 @@ private struct Drawer: View {
                             .onSubmit(commitNewTag)
                             // Esc 收起來。沒有這條就只能打完或點別的地方才脫身
                             .onExitCommand { addingTag = false; newTag = "" }
+                            .onKeyPress(.downArrow) { moveHighlight(1) }
+                            .onKeyPress(.upArrow) { moveHighlight(-1) }
+                            // 打字就把選取重置。不然選好第三項再補一個字，
+                            // 清單重篩之後那個索引指到的是另一個標籤
+                            .onChange(of: newTag) { _, _ in highlighted = -1 }
+                            .overlay(alignment: .topLeading) { suggestionList }
                     } else {
                         Button {
                             newTag = ""
@@ -471,6 +479,10 @@ private struct Drawer: View {
                 Spacer()
             }
             .padding(.vertical, 7)
+            // **zIndex 要加在這一層，不是加在候選清單上。**
+            // 決定誰蓋誰的是 VStack 裡各行的先後，附件行排在標籤行後面就會蓋上去，
+            // 清單自己標多高都沒用，那個數字只在同一個容器內比大小。
+            .zIndex(1)
 
             // 附件走檔案選擇器，不用拖也不用打字——路徑本來就不是手打的東西。
             HStack(spacing: 0) {
@@ -524,6 +536,61 @@ private struct Drawer: View {
         }
     }
 
+    // ── 已建過的標籤當候選 ────────────────────────────
+    /// 篩掉這筆已經有的，再用輸入的字串比對。跟輸入完全一樣的也不列，
+    /// 那時候直接按 Enter 就好，多一列只是擋住視線。
+    private var matches: [String] {
+        let q = newTag.trimmingCharacters(in: .whitespaces).lowercased()
+        return store.tagList
+            .map(\.name)
+            .filter { !item.tags.contains($0) }
+            .filter { q.isEmpty || ($0.lowercased().contains(q) && $0.lowercased() != q) }
+    }
+
+    /// 候選清單。**這套設計沒有陰影可以用**，所以靠 2px 黑框跟白底把它從紙上撐起來，
+    /// 選中的那一列鋪一支蠟筆的顏色，不是慣例的灰底。
+    @ViewBuilder
+    private var suggestionList: some View {
+        if !matches.isEmpty {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(matches.prefix(5).enumerated()), id: \.offset) { i, name in
+                    HStack(spacing: 6) {
+                        Circle().fill(store.colour(ofTag: name))
+                            .frame(width: 9, height: 9)
+                            .overlay(Circle().stroke(Color.ink, lineWidth: 1))
+                        Text(name).font(Typo.caption)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(i == highlighted ? Color.sunbeam : Color.snow)
+                    .contentShape(Rectangle())
+                    // 要在輸入框失焦之前就接到這一下
+                    .onTapGesture { pick(name) }
+                }
+            }
+            .frame(width: 132)
+            .background(RoundedRectangle(cornerRadius: Metric.small).fill(Color.snow))
+            .overlay(RoundedRectangle(cornerRadius: Metric.small)
+                .stroke(Color.ink, lineWidth: Metric.border))
+            .offset(y: 26)
+        }
+    }
+
+    private func moveHighlight(_ d: Int) -> KeyPress.Result {
+        guard !matches.isEmpty else { return .ignored }
+        let last = min(matches.count, 5) - 1
+        highlighted = max(-1, min(last, highlighted + d))
+        return .handled
+    }
+
+    private func pick(_ name: String) {
+        if !item.tags.contains(name) { item.tags.append(name) }
+        newTag = ""
+        highlighted = -1
+        addingTag = false
+    }
+
     /// 標籤藥丸。點一下展開 ✕，再點 ✕ 才移除。
     ///
     /// 舊版的移除藏在下拉選單裡的「✕ 標籤名」，要先知道選單裡有那個東西才找得到。
@@ -561,11 +628,17 @@ private struct Drawer: View {
     ///
     /// 打到已經存在的名字也沒關係，`addTag` 會擋掉重複，顏色沿用原本那顆。
     private func commitNewTag() {
+        // 清單裡有選中的就用那個，鍵盤選完直接按 Enter 才不會反而建出一個新標籤
+        if highlighted >= 0, highlighted < min(matches.count, 5) {
+            pick(matches[highlighted])
+            return
+        }
         let n = newTag.trimmingCharacters(in: .whitespaces)
         guard !n.isEmpty else { addingTag = false; return }
         store.addTag(n)
         if !item.tags.contains(n) { item.tags.append(n) }
         newTag = ""
+        highlighted = -1
         addingTag = false
     }
 
