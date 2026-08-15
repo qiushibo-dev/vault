@@ -99,6 +99,9 @@ struct L {
     let delete:        String
     let cancel:        String
     let checkUpdate:   String
+    let checking:      String
+    let isLatest:      String
+    let newVersion:    String
 
     // 建立／變更密碼
     let createPw:      String   // 鎖定畫面上那顆按鈕
@@ -190,6 +193,7 @@ struct L {
         tagDeleteWarnFmt: "刪除「%@」會從 %d 筆上一起移除，那些資料本身不會消失。",
         rename: "改名", delete: "刪除", cancel: "取消",
         checkUpdate: "檢查更新",
+        checking: "查詢中…", isLatest: "已是最新", newVersion: "有新版本",
 
         createPw: "建立密碼",
         createPwTitle: "設定主密碼",
@@ -269,6 +273,7 @@ struct L {
         tagDeleteWarnFmt: "「%@」を削除すると %d 件から外れます。データそのものは消えません。",
         rename: "名前を変更", delete: "削除", cancel: "キャンセル",
         checkUpdate: "更新を確認",
+        checking: "確認中…", isLatest: "最新です", newVersion: "新しい版があります",
 
         createPw: "パスワードを作る",
         createPwTitle: "マスターパスワードを決める",
@@ -348,6 +353,7 @@ struct L {
         tagDeleteWarnFmt: "Deleting \"%@\" takes it off %d items. The items themselves stay.",
         rename: "Rename", delete: "Delete", cancel: "Cancel",
         checkUpdate: "Check for updates",
+        checking: "Checking…", isLatest: "Up to date", newVersion: "New version",
 
         createPw: "Create a password",
         createPwTitle: "Set a master password",

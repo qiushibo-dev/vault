@@ -32,6 +32,8 @@ final class Store {
     var pwSheet: PasswordSheetMode? = nil
     /// 雙擊照片打開的檢視窗
     var photoViewer: Item? = nil
+    /// 檢查更新的結果
+    var updateState: UpdateState = .idle
 
     func createPassword(_ p: String) {
         password = p

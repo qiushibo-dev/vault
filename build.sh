@@ -41,8 +41,8 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
   <key>CFBundleDisplayName</key>       <string>Vault</string>
   <key>CFBundleExecutable</key>        <string>Vault</string>
   <key>CFBundleIdentifier</key>        <string>com.shihbo.vault</string>
-  <key>CFBundleVersion</key>           <string>0.1.0</string>
-  <key>CFBundleShortVersionString</key><string>0.1.0</string>
+  <key>CFBundleVersion</key>           <string>0.1.1</string>
+  <key>CFBundleShortVersionString</key><string>0.1.1</string>
   <key>CFBundlePackageType</key>       <string>APPL</string>
   <key>NSHighResolutionCapable</key>   <true/>
   <key>LSMinimumSystemVersion</key>    <string>14.0</string>

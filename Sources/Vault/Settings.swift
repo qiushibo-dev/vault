@@ -309,9 +309,45 @@ struct SettingsSheet: View {
                     Text("2026 Chiu Shihbo").font(Typo.caption)
                 }
                 Spacer()
-                pillButton(t.checkUpdate) {}
+
+                switch store.updateState {
+                case .idle, .failed:
+                    pillButton(t.checkUpdate) {
+                        Task { await store.checkUpdate() }
+                    }
+                case .checking:
+                    Pill(radius: Metric.pill, padH: 14, padV: 5) {
+                        Text(t.checking).font(Typo.caption)
+                    }
+                case .latest:
+                    Pill(fill: .lime, radius: Metric.pill, padH: 14, padV: 5) {
+                        Text(t.isLatest).font(Typo.caption)
+                    }
+                case .available(let tag):
+                    // 不在 app 裡下載安裝，開瀏覽器到 releases 頁
+                    Button {
+                        if let u = URL(string: Store.releasesURL) { NSWorkspace.shared.open(u) }
+                    } label: {
+                        Pill(fill: .ember, radius: Metric.pill, padH: 14, padV: 5) {
+                            Text("\(t.newVersion) \(tag)").font(Typo.caption)
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
             }
             .padding(20)
+            .overlay(alignment: .bottomTrailing) {
+                // 失敗不要默默吞掉——要分得出是離線還是 GitHub 那邊的問題
+                if case .failed(let msg) = store.updateState {
+                    Text(msg)
+                        .font(Typo.caption)
+                        .lineLimit(2)
+                        .frame(maxWidth: 300, alignment: .trailing)
+                        .padding(.trailing, 20)
+                        .padding(.bottom, 3)
+                }
+            }
         }
     }
 
