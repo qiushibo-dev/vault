@@ -12,6 +12,11 @@ final class Store {
     /// 設定視窗
     var showSettings = false
 
+    /// 底部的搜尋欄。空字串＝不過濾。
+    /// **不進存檔，上鎖時一併清掉**——留著的話下次解鎖會對著一個過濾過的清單，
+    /// 而那個過濾條件是上一次的，人不會記得。
+    var query = ""
+
     // ── 金鑰 ──────────────────────────────────────────
     /// 解鎖後的主金鑰。**只活在記憶體裡，上鎖就抹掉。**
     ///
@@ -294,7 +299,10 @@ final class Store {
     // ── 篩選 ──────────────────────────────────────────
     func rows(for tab: Tab) -> [Item] {
         let k = Item.kind(for: tab)
-        return items.filter { $0.kind == k }
+        let all = items.filter { $0.kind == k }
+        guard !query.trimmingCharacters(in: .whitespaces).isEmpty else { return all }
+        // 比對規則在 `Item.matches`，那裡才進得了 ./verify.sh。
+        return all.filter { $0.matches(query) }
     }
 
     // ── 編輯 ──────────────────────────────────────────
@@ -368,6 +376,7 @@ final class Store {
         answerPlain = ""
         locked = true
         expanded = nil
+        query = ""
         showSettings = false   // 設定開著時被自動上鎖，關掉才不會鎖完還看得到內容
         photoViewer = nil
     }

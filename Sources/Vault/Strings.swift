@@ -50,6 +50,8 @@ struct L {
     let phSecret:      String
     let phFileMeta:    String
     let enterHint:     String   // 空白列右邊的送出提示
+    let searchPh:      String   // 底部搜尋欄
+    let noMatch:       String   // 搜尋沒結果時，清單裡那句話
 
     // Touch ID 用不了的原因。不講清楚的話，那顆按鈕就只是「有時候不見」
     let bioNoHardware: String
@@ -179,6 +181,8 @@ struct L {
         addFile: "加入檔案",
         phName: "項目摘要", phUser: "使用者名稱", phSecret: "密碼", phFileMeta: "類型 · 大小",
         enterHint: "Enter 新增",
+        searchPh: "找東西…",
+        noMatch: "這一頁沒有符合的項目",
         bioNoHardware: "這台機器沒有 Touch ID",
         bioNotEnrolled: "系統設定裡還沒有註冊指紋",
         bioLockout: "失敗太多次被系統鎖住了，先用密碼登入一次",
@@ -281,6 +285,8 @@ struct L {
         addFile: "ファイルを追加",
         phName: "項目の概要", phUser: "ユーザー名", phSecret: "パスワード", phFileMeta: "種類 · サイズ",
         enterHint: "Enter で追加",
+        searchPh: "さがす…",
+        noMatch: "このタブに一致する項目はありません",
         bioNoHardware: "この Mac に Touch ID はありません",
         bioNotEnrolled: "システム設定で指紋がまだ登録されていません",
         bioLockout: "失敗が続いたためロックされました。一度パスワードで入ってください",
@@ -384,6 +390,8 @@ struct L {
         addFile: "Add a file",
         phName: "Summary", phUser: "Username", phSecret: "Password", phFileMeta: "Type · size",
         enterHint: "Enter to add",
+        searchPh: "Find something…",
+        noMatch: "Nothing on this tab matches",
         bioNoHardware: "This Mac has no Touch ID",
         bioNotEnrolled: "No fingerprint enrolled in System Settings yet",
         bioLockout: "Locked out after too many attempts — sign in with your password once",

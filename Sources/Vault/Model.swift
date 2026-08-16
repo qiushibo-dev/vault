@@ -92,6 +92,24 @@ struct Item: Identifiable, Codable, Equatable {
         value.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
+    /// 底部搜尋欄的比對。大小寫和前後空白在這裡就正規化掉——
+    /// 要求呼叫端先處理的話，哪天有第二個呼叫端忘了做，症狀是
+    /// 「打大寫字母搜不到東西」，而那看起來像資料壞了，不像少呼叫一個函式。
+    ///
+    /// **`value` 刻意不比對。** 密碼分頁的 value 就是密碼本身，
+    /// 讓它參與搜尋等於開了一個猜測管道——輸入幾個字元、看清單剩幾筆，
+    /// 就能一格一格試出內容，畫面上什麼都不用顯示。
+    /// 文件分頁的 value 只是「類型 · 大小」，一起排除比較單純。
+    func matches(_ query: String) -> Bool {
+        let q = query.trimmingCharacters(in: .whitespaces).lowercased()
+        if q.isEmpty { return true }
+        for field in [name, username, url, note] where field.lowercased().contains(q) {
+            return true
+        }
+        // 標籤存的是名字本身，不是 id（改名時整批換掉），所以直接比字串。
+        return tags.contains { $0.lowercased().contains(q) }
+    }
+
     static func kind(for tab: Tab) -> Kind {
         switch tab {
         case .passwords: .password

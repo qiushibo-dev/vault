@@ -74,7 +74,7 @@ struct OutlineCard<C: View>: View {
 // 這個風格的靈魂是散落在畫布上、角度不一的手繪線稿。
 // 全部單線黑色、不填色，刻意不對齊格線。
 enum Doodle: CaseIterable {
-    case key, lock, fingerprint, star, spiral, eye, gear, clip, film
+    case key, lock, fingerprint, star, spiral, eye, gear, clip, film, magnifier
 
     func path(in r: CGRect) -> Path {
         var p = Path()
@@ -158,6 +158,13 @@ enum Doodle: CaseIterable {
             p.addArc(center: CGPoint(x: w * 0.44, y: h * 0.26), radius: w * 0.14,
                      startAngle: .degrees(180), endAngle: .degrees(0), clockwise: false)
             p.addLine(to: CGPoint(x: w * 0.58, y: h * 0.60))
+
+        case .magnifier:
+            // 放大鏡。圓心 (0.38, 0.38)、半徑 0.30，柄從圓上 45 度那一點接出去——
+            // 0.38 + 0.30 × cos45° = 0.59，所以柄起點寫 0.59 才會貼著圓而不是穿進去。
+            p.addEllipse(in: CGRect(x: w * 0.08, y: h * 0.08, width: w * 0.60, height: h * 0.60))
+            p.move(to: CGPoint(x: w * 0.59, y: h * 0.59))
+            p.addLine(to: CGPoint(x: w * 0.93, y: h * 0.93))
 
         case .eye:
             p.move(to: CGPoint(x: 0, y: h / 2))

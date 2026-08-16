@@ -8,6 +8,8 @@ struct MainView: View {
     /// 照片和影片的刪除會**連加密過的附件一起清掉**，跟橫線紙那邊一樣不可逆。
     @State private var pendingDelete: Item? = nil
 
+    @FocusState private var searchFocus: Bool
+
     var body: some View {
         @Bindable var s = store
         ZStack {
@@ -87,25 +89,44 @@ struct MainView: View {
     }
 
     private var rows: some View {
-        VStack(spacing: 0) {
-            ForEach(store.rows(for: store.tab)) { item in
+        let list = store.rows(for: store.tab)
+        return VStack(spacing: 0) {
+            ForEach(list) { item in
                 if let b = store.binding(item.id) {
                     Row(item: b, expanded: store.expanded == item.id)
                 }
             }
-            NewRow(kind: Item.kind(for: store.tab))
+            // 搜尋中不顯示空白列。過濾狀態下往那一列打字，新的一筆多半當場
+            // 不符合條件而消失，看起來會像沒存進去。
+            if store.query.isEmpty {
+                NewRow(kind: Item.kind(for: store.tab))
+            } else if list.isEmpty {
+                emptyHint
+            }
         }
         .padding(.vertical, 6)
+    }
+
+    /// 過濾之後一筆都不剩時，清單裡要有話講。
+    /// 空白的卡片看起來像資料不見了——尤其分頁切過去、篩選條件還留著的時候。
+    private var emptyHint: some View {
+        Text(store.t.noMatch)
+            .font(Typo.body)
+            .foregroundStyle(Color.ink.opacity(0.4))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 34)
     }
 
     /// 照片和影片共用。照片顯示縮圖，影片顯示底片 icon——
     /// 抽第一幀要 AVFoundation 而且每格都要解一次，這個規模不值得。
     private var mediaGrid: some View {
         let kind = Item.kind(for: store.tab)
-        return LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 14,
+        let list = store.rows(for: store.tab)
+        return VStack(spacing: 0) {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 14,
                                                            alignment: .top), count: 3),
                          alignment: .center, spacing: 16) {
-            ForEach(store.rows(for: store.tab)) { item in
+            ForEach(list) { item in
                 PhotoCell(caption: item.name) {
                     ZStack {
                         RoundedRectangle(cornerRadius: Metric.small)
@@ -142,17 +163,23 @@ struct MainView: View {
                 }
             }
             // 上傳。標題留空但保留同一份結構，否則格線置中會讓它跟旁邊錯開。
-            PhotoCell(caption: "") {
-                Button { store.pickFiles(kind) } label: {
-                    RoundedRectangle(cornerRadius: Metric.small)
-                        .stroke(Color.ink, style: StrokeStyle(lineWidth: Metric.border, dash: [7, 6]))
-                        .overlay(Text("＋").font(Typo.headingSm))
-                        .contentShape(Rectangle())
+            // 搜尋中不顯示，理由跟橫線紙的空白列一樣。
+            if store.query.isEmpty {
+                PhotoCell(caption: "") {
+                    Button { store.pickFiles(kind) } label: {
+                        RoundedRectangle(cornerRadius: Metric.small)
+                            .stroke(Color.ink, style: StrokeStyle(lineWidth: Metric.border, dash: [7, 6]))
+                            .overlay(Text("＋").font(Typo.headingSm))
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
         }
         .padding(24)
+
+        if !store.query.isEmpty && list.isEmpty { emptyHint }
+        }
     }
 
     // ── 底部 ──────────────────────────────────────────
@@ -174,6 +201,8 @@ struct MainView: View {
             .buttonStyle(.plain)
 
             Spacer()
+            search
+            Spacer()
 
             // Figma 上這裡是 Save。
             // 但每一格離開焦點就已經寫進去了，留一顆「希望你別忘記按」的按鈕
@@ -185,6 +214,49 @@ struct MainView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+        }
+        // ⌘F 把游標送進搜尋欄。放 background 是為了讓這顆按鈕不佔版面。
+        .background(
+            Button("") { searchFocus = true }
+                .keyboardShortcut("f", modifiers: .command)
+                .opacity(0)
+        )
+    }
+
+    // ── 搜尋 ──────────────────────────────────────────
+    // 齒輪和鎖之間本來一直空著，搜尋欄放這裡剛好，而且離手最近的兩顆
+    // 按鈕（設定、上鎖）位置都沒有動。
+    private var search: some View {
+        @Bindable var s = store
+        return Pill(padH: 16, padV: 10) {
+            HStack(spacing: 9) {
+                DoodleView(kind: .magnifier, size: 16, stroke: 1.8)
+                ZStack(alignment: .leading) {
+                    ghost(store.query, store.t.searchPh, Typo.body, focused: searchFocus)
+                    TextField("", text: $s.query)
+                        .textFieldStyle(.plain)
+                        .font(Typo.body)
+                        .focused($searchFocus)
+                        // 打字時把展開的抽屜收起來。那一筆可能已經被過濾掉，
+                        // 抽屜卻還開著的話，看起來會像清單自己塌了一格。
+                        .onChange(of: store.query) { store.expanded = nil }
+                }
+                .frame(width: 190)
+                // 清空鍵。用 opacity 而不是 if——用 if 的話藥丸會在打第一個字的
+                // 瞬間變寬，整條底列跟著跳一下。
+                Button {
+                    store.query = ""
+                    searchFocus = false
+                } label: {
+                    Text("×")
+                        .font(Typo.bodyBold)
+                        .frame(width: 16, height: 16)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .opacity(store.query.isEmpty ? 0 : 1)
+                .allowsHitTesting(!store.query.isEmpty)
+            }
         }
     }
 }

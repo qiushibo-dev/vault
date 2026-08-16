@@ -339,6 +339,40 @@ do {
     check("清掉答案不影響提示問題", KeyStore.hint == "我媽姓啥？")
 }
 
+// ── 搜尋的比對規則 ────────────────────────────────────
+print("\n搜尋")
+
+var hit = Item(kind: .password)
+hit.name = "中華電信"
+hit.username = "Qiushibo@Gmail.com"
+hit.value = "Tr0ub4dor&3"
+hit.url = "https://www.cht.com.tw/login"
+hit.note = "每月 12 號扣款"
+hit.tags = ["帳單", "Telecom"]
+
+check("空字串什麼都比得上（沒在搜尋就不該過濾）", hit.matches(""))
+check("比對摘要", hit.matches("中華"))
+check("比對使用者名稱", hit.matches("qiushibo"))
+check("比對網址", hit.matches("cht.com"))
+check("比對備註", hit.matches("扣款"))
+check("比對標籤", hit.matches("帳單"))
+check("英文標籤不分大小寫", hit.matches("telecom"))
+check("使用者名稱不分大小寫", hit.matches("GMAIL"))
+check("前後空白不算數", hit.matches("  中華  "))
+check("只打空白等於沒搜尋", hit.matches("   "))
+check("比不上的就是比不上", !hit.matches("樂天"))
+
+// 這幾條是刻意的設計，不是漏掉的欄位。
+// 拿密碼去比對的話，輸入幾個字元、看清單剩幾筆，就能一格一格試出內容。
+check("🔴 密碼本身不參與搜尋", !hit.matches("tr0ub4dor"))
+check("🔴 密碼的開頭也不行", !hit.matches("tr0"))
+
+var card = Item(kind: .document)
+card.name = "在留カード"
+card.value = "PDF · 2.4 MB"
+check("文件的類型／大小也不參與", !card.matches("pdf"))
+check("文件比得到名稱", card.matches("在留"))
+
 // ── 真實迭代次數的成本 ────────────────────────────────
 print("\n實際迭代次數（\(Crypto.iterations) 次）")
 let t0 = Date()
