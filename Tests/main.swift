@@ -344,7 +344,7 @@ print("\n搜尋")
 
 var hit = Item(kind: .password)
 hit.name = "中華電信"
-hit.username = "Qiushibo@Gmail.com"
+hit.username = "TestUser@Gmail.com"
 hit.value = "Tr0ub4dor&3"
 hit.url = "https://www.cht.com.tw/login"
 hit.note = "每月 12 號扣款"
@@ -352,7 +352,7 @@ hit.tags = ["帳單", "Telecom"]
 
 check("空字串什麼都比得上（沒在搜尋就不該過濾）", hit.matches(""))
 check("比對摘要", hit.matches("中華"))
-check("比對使用者名稱", hit.matches("qiushibo"))
+check("比對使用者名稱", hit.matches("testuser"))
 check("比對網址", hit.matches("cht.com"))
 check("比對備註", hit.matches("扣款"))
 check("比對標籤", hit.matches("帳單"))
