@@ -17,6 +17,12 @@ struct PhotoViewer: View {
     @State private var plain: Data? = nil
     private var image: NSImage? { plain.flatMap { NSImage(data: $0) } }
 
+    /// 不是影片、也解不出圖片，但檔案確實存在——PDF、txt 這類一般文件。
+    /// 這種走跟影片同一條「解密成暫存檔交給系統」的路，不試著在 app 裡畫出來。
+    private var isGenericFile: Bool {
+        item.kind != .video && image == nil && Storage.blobExists(item.attachment)
+    }
+
     /// 標題的編輯內容。跟設定裡的提示問題同樣的理由：不直接綁 store，
     /// 免得每打一個字就跑一次存檔排程。
     @State private var name = ""
@@ -63,7 +69,7 @@ struct PhotoViewer: View {
                 .padding(.top, 22)
                 .padding(.bottom, 14)
 
-                OutlineCard(fill: item.kind == .video ? .powder : .snow) {
+                OutlineCard(fill: item.kind == .video || isGenericFile ? .powder : .snow) {
                     Group {
                         if item.kind == .video {
                             // 影片不在 app 裡播。內建播放器要處理一堆編碼，
@@ -77,6 +83,13 @@ struct PhotoViewer: View {
                                 .resizable()
                                 .aspectRatio(contentMode: .fit)
                                 .padding(14)
+                        } else if Storage.blobExists(item.attachment) {
+                            // 檔案讀得到、只是不是圖片（PDF、txt、docx……）。
+                            // 跟影片走同一條「解密成暫存檔交給系統」的路，不試著在 app 裡畫出來。
+                            VStack(spacing: 14) {
+                                DoodleView(kind: .clip, size: 88, stroke: 2.5)
+                                Text(item.value).font(Typo.caption)
+                            }
                         } else {
                             // 附件是加密後複製進來的，原檔搬走不影響。
                             // 走到這裡代表 blobs 底下那個檔真的不見了，或是金鑰對不上。
@@ -93,8 +106,8 @@ struct PhotoViewer: View {
                 HStack(spacing: 8) {
                     Button { export(thumbnail: false) } label: {
                         Pill(fill: .snow, radius: Metric.pill, padH: 18, padV: 8) {
-                            // 「原圖」對一支影片講不通
-                            Text(item.kind == .video ? t.exportFile : t.exportOriginal)
+                            // 「原圖」對一支影片或一份文件都講不通
+                            Text(item.kind == .video || isGenericFile ? t.exportFile : t.exportOriginal)
                                 .font(Typo.nav)
                         }
                         .contentShape(Rectangle())
@@ -102,8 +115,9 @@ struct PhotoViewer: View {
                     .buttonStyle(.plain)
 
                     Button {
-                        if item.kind == .video {
-                            // 解密成暫存檔再交給系統播放器。上鎖時 `clearScratch()` 會掃掉。
+                        if item.kind == .video || isGenericFile {
+                            // 解密成暫存檔再交給系統（播放器，或這種檔案類型的預設程式）。
+                            // 上鎖時 `clearScratch()` 會掃掉。
                             if let url = store.materialise(item) {
                                 NSWorkspace.shared.open(url)
                             }
@@ -112,7 +126,9 @@ struct PhotoViewer: View {
                         }
                     } label: {
                         Pill(fill: .mint, radius: Metric.pill, padH: 18, padV: 8) {
-                            Text(item.kind == .video ? t.preview : t.exportThumb).font(Typo.nav)
+                            Text(item.kind == .video ? t.preview
+                                 : isGenericFile ? t.openWithDefault : t.exportThumb)
+                                .font(Typo.nav)
                         }
                         .contentShape(Rectangle())
                     }
@@ -123,7 +139,8 @@ struct PhotoViewer: View {
                 .padding(.horizontal, 24)
                 .padding(.top, 14)
 
-                Text(item.kind == .video ? t.previewNote : t.thumbNote)
+                Text(item.kind == .video ? t.previewNote
+                     : isGenericFile ? t.openWithDefaultNote : t.thumbNote)
                     .font(Typo.caption)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)

@@ -534,8 +534,14 @@ private struct Drawer: View {
                                 }
                             }
                             .onSubmit(commitNewTag)
-                            // Esc 收起來。沒有這條就只能打完或點別的地方才脫身
+                            // Esc 收起來。
                             .onExitCommand { addingTag = false; newTag = "" }
+                            // 點旁邊讓輸入框失焦，效果要跟 Esc 一樣直接收起來——
+                            // 不然使用者開了又反悔，這排除了打完字或按 Esc 之外沒有別的退路。
+                            // `pick(_:)` 點下去會先幫這兩個變數收尾，所以這裡晚一步觸發也不會衝突。
+                            .onChange(of: tagFocused) { _, focused in
+                                if !focused { addingTag = false; newTag = "" }
+                            }
                             .onKeyPress(.downArrow) { moveHighlight(1) }
                             .onKeyPress(.upArrow) { moveHighlight(-1) }
                             // 打字就把選取重置。不然選好第三項再補一個字，
@@ -579,10 +585,14 @@ private struct Drawer: View {
                 } else {
                     // 附件已經加密複製進保管箱，這裡沒有路徑可以顯示了。
                     // 顯示的是使用者自己給的名字加上原本的副檔名。
+                    // 點一下開預覽——跟格狀畫面雙擊照片走同一個 PhotoViewer，
+                    // 它自己會分辨是圖片、影片，還是一般文件。
                     Text(item.ext.isEmpty ? item.name : "\(item.name).\(item.ext)")
                         .font(Typo.body)
                         .lineLimit(1)
                         .truncationMode(.middle)
+                        .contentShape(Rectangle())
+                        .onTapGesture { store.photoViewer = item }
                     Button { detachFile() } label: {
                         Text("✕").font(Typo.caption)
                     }

@@ -74,6 +74,8 @@ struct L {
     let thumbNote:     String
     let preview:       String
     let previewNote:   String
+    let openWithDefault:     String   // 文件分頁的附件。跟影片共用「先解密成暫存檔」的機制，但講法不能提「播放器」
+    let openWithDefaultNote: String
 
     // 設定
     let settings:      String
@@ -201,6 +203,8 @@ struct L {
         thumbNote: "縮圖是長邊 1024 的 JPEG，用來貼進表單或寄出去。",
         preview: "用系統播放器預覽",
         previewNote: "預覽會用 macOS 內建的播放器開啟原檔。影片不在這裡播——內建播放器要處理一堆編碼，不值得。",
+        openWithDefault: "用預設程式開啟",
+        openWithDefaultNote: "會先解密成暫存檔，交給你電腦上打開這類檔案的預設程式（例如 PDF 交給預覽程式）。上鎖時這份暫存檔會自動清掉。",
 
         settings: "SETTINGS",
         close: "關閉",
@@ -305,6 +309,8 @@ struct L {
         thumbNote: "縮小版は長辺 1024 の JPEG です。フォームに貼るときや送るときに。",
         preview: "システムのプレイヤーで再生",
         previewNote: "macOS 標準のプレイヤーで元ファイルを開きます。アプリ内では再生しません。内蔵プレイヤーは対応コーデックの手当てが多すぎて割に合わないからです。",
+        openWithDefault: "既定のアプリで開く",
+        openWithDefaultNote: "一時ファイルに復号してから、このMacでその種類のファイルを開く既定のアプリに渡します（PDFならプレビュー.appなど）。ロック時にこの一時ファイルは自動的に削除されます。",
 
         settings: "SETTINGS",
         close: "閉じる",
@@ -410,6 +416,8 @@ struct L {
         thumbNote: "The smaller copy is a JPEG with a 1024px long edge, for pasting into forms or sending on.",
         preview: "Open in the system player",
         previewNote: "Opens the original in the built-in macOS player. Video does not play in here: a built-in player means handling a long tail of codecs, and it is not worth it.",
+        openWithDefault: "Open with default app",
+        openWithDefaultNote: "Decrypts to a temporary file first, then hands it to whatever app your Mac uses for that file type (Preview for a PDF, for example). That temporary file is cleared automatically when the vault locks.",
 
         settings: "SETTINGS",
         close: "Close",
